@@ -1,0 +1,68 @@
+{
+  "model_type": "log_price",
+  "feature_columns": [
+    "make_key",
+    "region",
+    "utilization_bucket",
+    "raw_category",
+    "condition",
+    "year",
+    "hours",
+    "equipment_age",
+    "hours_per_year",
+    "is_current_production",
+    "years_since_discontinued",
+    "sale_month",
+    "sale_quarter",
+    "month_sin",
+    "month_cos",
+    "is_planting_season",
+    "is_harvest_season",
+    "barometer_norm",
+    "sentiment_spread",
+    "investment_confidence",
+    "diesel_relative",
+    "el_nino_phase",
+    "log_make_volume",
+    "log_model_volume"
+  ],
+  "categorical_features": [
+    "make_key",
+    "region",
+    "utilization_bucket",
+    "raw_category",
+    "condition"
+  ],
+  "metadata": {
+    "trained_at": "2025-12-29T13:16:41.068395",
+    "model_type": "log_price",
+    "n_train": 3731,
+    "n_val": 800,
+    "n_test": 800,
+    "best_iteration": 174,
+    "metrics": {
+      "val_rmse": 43452.828568031735,
+      "val_mape": 27.359752766401503,
+      "val_r2": 0.8887532741818223,
+      "test_rmse": 37430.80865213821,
+      "test_mape": 33.31673398126779,
+      "test_r2": 0.9096521302765773
+    }
+  },
+  "params": {
+    "objective": "regression",
+    "metric": "rmse",
+    "boosting_type": "gbdt",
+    "num_leaves": 63,
+    "max_depth": -1,
+    "min_data_in_leaf": 50,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "lambda_l1": 0.1,
+    "lambda_l2": 0.1,
+    "verbose": -1,
+    "seed": 42
+  }
+}

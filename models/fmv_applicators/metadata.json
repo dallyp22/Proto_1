@@ -1,0 +1,63 @@
+{
+  "feature_columns": [
+    "make_key",
+    "region",
+    "utilization_bucket",
+    "raw_category",
+    "year",
+    "hours",
+    "equipment_age",
+    "hours_per_year",
+    "is_current_production",
+    "years_since_discontinued",
+    "sale_month",
+    "sale_quarter",
+    "month_sin",
+    "month_cos",
+    "is_planting_season",
+    "is_harvest_season",
+    "barometer_norm",
+    "sentiment_spread",
+    "investment_confidence",
+    "diesel_relative",
+    "el_nino_phase",
+    "log_make_volume"
+  ],
+  "categorical_features": [
+    "make_key",
+    "region",
+    "utilization_bucket",
+    "raw_category"
+  ],
+  "metadata": {
+    "trained_at": "2025-12-29T12:06:03.285110",
+    "n_train": 1802,
+    "n_val": 386,
+    "n_test": 387,
+    "best_iteration": 244,
+    "metrics": {
+      "val_rmse": 33664.409030900155,
+      "val_mape": 56.402909453862435,
+      "val_r2": 0.8575052133330767,
+      "test_rmse": 32553.366117199177,
+      "test_mape": 61.6334912998863,
+      "test_r2": 0.8484671608990523
+    }
+  },
+  "params": {
+    "objective": "regression",
+    "metric": "rmse",
+    "boosting_type": "gbdt",
+    "num_leaves": 63,
+    "max_depth": -1,
+    "min_data_in_leaf": 50,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "lambda_l1": 0.1,
+    "lambda_l2": 0.1,
+    "verbose": -1,
+    "seed": 42
+  }
+}
