@@ -281,8 +281,11 @@ This is an internal DPA Auctions project. For questions or improvements, contact
 
 MIT License - See [LICENSE](LICENSE) file for details.
 
+**Core valuation models and methodologies are licensed from Dallas Polivka.**
+
 ## Acknowledgments
 
+- **Models & Methodology**: Dallas Polivka
 - **Data Source**: DPA Auctions transaction database
 - **Economic Data**: Purdue Ag Economy Barometer, USDA, NOAA
 - **Technology**: LightGBM, Streamlit, scikit-learn communities
@@ -290,5 +293,6 @@ MIT License - See [LICENSE](LICENSE) file for details.
 ---
 
 **Built**: December 2025  
+**Creator**: Dallas Polivka  
 **Status**: Production-Ready (Harvesting, Applicators)  
 **Contact**: DPA Auctions Development Team

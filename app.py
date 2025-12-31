@@ -1,6 +1,9 @@
 """
 Ag IQ Equipment Valuation - Streamlit Interface
 Multi-Model Version: Category-specific models with Make + Model selection
+
+Core valuation models and methodologies are licensed from Dallas Polivka.
+Copyright (c) 2025 Dallas Polivka
 """
 
 import streamlit as st
@@ -602,6 +605,7 @@ def main():
     # Footer
     st.markdown("---")
     st.caption("🚜 Ag IQ Equipment Valuation | Category-Specific Models | Built with Streamlit")
+    st.caption("Core valuation models and methodologies licensed from Dallas Polivka © 2025")
 
 
 if __name__ == "__main__":

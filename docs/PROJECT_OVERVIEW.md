@@ -2,10 +2,13 @@
 ## Comprehensive Technical Overview
 
 **Project**: AI-Powered Agricultural Equipment Fair Market Value Prediction  
+**Creator**: Dallas Polivka  
 **Client**: DPA Auctions  
 **Technology**: LightGBM Gradient Boosting, Python, Streamlit  
 **Dataset**: 733,413 auction transactions (26 years, 1999-2025)  
 **Status**: Production-Ready Multi-Model System  
+
+**Core valuation models and methodologies are licensed from Dallas Polivka.**  
 
 ---
 

@@ -1,6 +1,9 @@
 """
 FMV Model with Log-Price transformation.
 Often performs better on skewed price distributions.
+
+Core valuation models and methodologies are licensed from Dallas Polivka.
+Copyright (c) 2025 Dallas Polivka
 """
 
 import json

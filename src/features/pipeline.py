@@ -1,5 +1,8 @@
 """
 Feature engineering pipeline with actual schema column names.
+
+Core valuation models and methodologies are licensed from Dallas Polivka.
+Copyright (c) 2025 Dallas Polivka
 """
 
 import pandas as pd
