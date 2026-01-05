@@ -24,7 +24,9 @@
     "diesel_relative",
     "el_nino_phase",
     "log_make_volume",
-    "log_model_volume"
+    "log_model_volume",
+    "condition_score",
+    "horsepower"
   ],
   "categorical_features": [
     "make_model_key",
@@ -34,19 +36,19 @@
     "condition"
   ],
   "metadata": {
-    "trained_at": "2026-01-05T10:52:05.443258",
+    "trained_at": "2026-01-05T11:24:17.624223",
     "model_type": "log_price",
-    "n_train": 4090,
-    "n_val": 877,
-    "n_test": 877,
-    "best_iteration": 90,
+    "n_train": 9991,
+    "n_val": 2141,
+    "n_test": 2141,
+    "best_iteration": 185,
     "metrics": {
-      "val_rmse": 21641.345508983457,
-      "val_mape": 69.3792412619638,
-      "val_r2": 0.4305348550224517,
-      "test_rmse": 27244.195314204815,
-      "test_mape": 67.18663025076208,
-      "test_r2": 0.3686101677015985
+      "val_rmse": 31260.34959728176,
+      "val_mape": 44.78226751468537,
+      "val_r2": 0.889470403049178,
+      "test_rmse": 26901.34199632002,
+      "test_mape": 65.44611794511582,
+      "test_r2": 0.9111254157125641
     }
   },
   "params": {

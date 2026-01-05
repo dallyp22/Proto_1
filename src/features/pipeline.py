@@ -26,7 +26,7 @@ class FeaturePipeline:
     """
     
     CATEGORICAL_FEATURES = [
-        'make_key',
+        'make_model_key',  # Combined make-model (e.g., "john-deere-8320r")
         'region',
         'utilization_bucket',
         'raw_category',
@@ -53,6 +53,8 @@ class FeaturePipeline:
         'el_nino_phase',
         'log_make_volume',
         'log_model_volume',  # Model popularity/desirability
+        'condition_score',   # Numeric condition rating (1-5)
+        'horsepower',        # Engine power - CRITICAL price driver
     ]
     
     TARGET = 'price'
@@ -76,16 +78,18 @@ class FeaturePipeline:
         if 'diesel_price' in df.columns:
             self._reference_values['diesel_mean'] = df['diesel_price'].mean()
         
-        # Make volumes
-        if 'make_key' in df.columns:
+        # Make-Model volumes (combined popularity)
+        if 'make_model_key' in df.columns:
+            self._make_volumes = df['make_model_key'].value_counts().to_dict()
+        elif 'make_key' in df.columns:
             self._make_volumes = df['make_key'].value_counts().to_dict()
         
-        # Model volumes (model popularity)
+        # Keep model volumes for backward compatibility
         if 'raw_model' in df.columns:
             self._model_volumes = df['raw_model'].value_counts().to_dict()
         
         # Valid categories (for rare handling)
-        for col in ['make_key', 'region', 'raw_category']:
+        for col in ['make_model_key', 'region', 'raw_category']:
             if col in df.columns:
                 counts = df[col].value_counts()
                 valid = counts[counts >= self.config.min_category_frequency].index
@@ -117,8 +121,55 @@ class FeaturePipeline:
         """Return (categorical, numeric) feature lists."""
         return self.CATEGORICAL_FEATURES.copy(), self.NUMERIC_FEATURES.copy()
     
+    def _parse_specs(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Parse equipment specifications from JSON field."""
+        import json
+        
+        if 'specs' not in df.columns:
+            # If no specs field, set defaults
+            df['horsepower'] = 150.0  # Default HP
+            return df
+        
+        # Parse JSON specs (convert Ruby hash notation to JSON)
+        def safe_parse_specs(spec_str):
+            if pd.isna(spec_str) or not spec_str:
+                return {}
+            try:
+                # Convert Ruby notation to JSON
+                json_str = str(spec_str).replace('=>', ':').replace('nil', 'null')
+                return json.loads(json_str)
+            except:
+                return {}
+        
+        df['specs_dict'] = df['specs'].apply(safe_parse_specs)
+        
+        # Extract horsepower - CRITICAL price driver!
+        df['horsepower'] = df['specs_dict'].apply(
+            lambda x: x.get('horsepower') if isinstance(x, dict) else None
+        )
+        df['horsepower'] = pd.to_numeric(df['horsepower'], errors='coerce')
+        
+        # Impute missing horsepower by make_model_key
+        if 'make_model_key' in df.columns and df['horsepower'].notna().any():
+            df['horsepower'] = df['horsepower'].fillna(
+                df.groupby('make_model_key')['horsepower'].transform('median')
+            )
+        
+        # Final fallback to category median or default
+        if df['horsepower'].isna().any():
+            if 'raw_category' in df.columns:
+                df['horsepower'] = df['horsepower'].fillna(
+                    df.groupby('raw_category')['horsepower'].transform('median')
+                )
+            df['horsepower'] = df['horsepower'].fillna(150.0)  # Overall default
+        
+        return df
+    
     def _add_equipment_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Equipment-derived features."""
+        
+        # Parse specifications from JSON
+        df = self._parse_specs(df)
         
         # Parse and standardize condition
         if 'raw_condition' in df.columns:
@@ -137,21 +188,35 @@ class FeaturePipeline:
             }
             df['condition'] = df['condition'].map(lambda x: condition_map.get(x, 'good'))
             df['condition'] = df['condition'].fillna('good')  # Default to good
+            
+            # Add NUMERIC condition score (1-5 scale)
+            condition_scores = {
+                'excellent': 5.0,
+                'good': 4.0,
+                'fair': 3.0,
+                'poor': 2.0,
+            }
+            df['condition_score'] = df['condition'].map(condition_scores).fillna(4.0)
         else:
             df['condition'] = 'good'  # Default if not available
+            df['condition_score'] = 4.0
         
         # Equipment age
         if 'sold_date' in df.columns and 'year' in df.columns:
             sale_year = pd.to_datetime(df['sold_date']).dt.year
             df['equipment_age'] = (sale_year - df['year']).clip(lower=0, upper=self.config.equipment_age_cap)
         
-        # Hours per year
-        if 'hours' in df.columns and 'equipment_age' in df.columns:
-            df['hours_per_year'] = np.where(
-                df['equipment_age'] > 0,
-                df['hours'] / df['equipment_age'],
-                df['hours']
-            )
+        # Hours per year (use pre-calculated if available, otherwise calculate)
+        if 'hours_per_year' not in df.columns or df['hours_per_year'].isna().all():
+            if 'hours' in df.columns and 'equipment_age' in df.columns:
+                df['hours_per_year'] = np.where(
+                    df['equipment_age'] > 0,
+                    df['hours'] / df['equipment_age'],
+                    df['hours']
+                )
+        
+        # Clip to reasonable max
+        if 'hours_per_year' in df.columns:
             df['hours_per_year'] = df['hours_per_year'].clip(upper=self.config.hours_per_year_cap)
             
             # Utilization bucket
@@ -231,13 +296,16 @@ class FeaturePipeline:
     def _add_density_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Data density features."""
         
-        # Make volume
-        if 'make_key' in df.columns:
+        # Make-Model volume (combined popularity/desirability)
+        if 'make_model_key' in df.columns:
+            df['make_volume'] = df['make_model_key'].map(self._make_volumes).fillna(1)
+            df['log_make_volume'] = np.log1p(df['make_volume'])
+        elif 'make_key' in df.columns:
             df['make_volume'] = df['make_key'].map(self._make_volumes).fillna(1)
             df['log_make_volume'] = np.log1p(df['make_volume'])
         
-        # Model volume (popularity/desirability indicator)
-        if 'raw_model' in df.columns:
+        # Model volume (for backward compatibility or if separate model field used)
+        if 'raw_model' in df.columns and self._model_volumes:
             df['model_volume'] = df['raw_model'].map(self._model_volumes).fillna(1)
             df['log_model_volume'] = np.log1p(df['model_volume'])
         else:
@@ -249,7 +317,7 @@ class FeaturePipeline:
     def _handle_rare_categories(self, df: pd.DataFrame) -> pd.DataFrame:
         """Map rare categories to 'other'."""
         
-        for col in ['make_key', 'region', 'raw_category']:
+        for col in ['make_model_key', 'region', 'raw_category']:
             if col in df.columns:
                 valid_key = f'{col}_valid'
                 if valid_key in self._reference_values:

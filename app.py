@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.models.fmv import FMVModel
 from src.models.fmv_log import FMVLogModel
 from src.models.multi_model_config import get_model_display_name, CATEGORY_MODELS
+from src.models.smart_router import SmartModelRouter
 
 # Page configuration
 st.set_page_config(
@@ -65,21 +66,9 @@ st.markdown("""
 
 
 @st.cache_resource
-def load_model(category_key: str, model_type: str = 'regular'):
-    """Load a specific category model."""
-    suffix = '_log' if model_type == 'log' else ''
-    model_path = Path(__file__).parent / "models" / f"fmv_{category_key}{suffix}"
-    
-    if not model_path.exists():
-        return None
-    
-    try:
-        if model_type == 'log':
-            return FMVLogModel.load(str(model_path))
-        else:
-            return FMVModel.load(str(model_path))
-    except Exception:
-        return None
+def get_router():
+    """Get the smart model router (cached)."""
+    return SmartModelRouter()
 
 
 def check_available_models():
@@ -147,13 +136,25 @@ def create_input_dataframe(inputs):
     """Create a DataFrame from user inputs for prediction."""
     current_date = datetime.now()
     
+    # Create make_model_key from make and model
+    make = inputs['make']
+    model = inputs.get('model', '')
+    
+    if model and model != '(Any Model)':
+        # Normalize model name
+        model_normalized = str(model).lower().replace(' ', '-').replace('_', '-')
+        make_model_key = f"{make}-{model_normalized}"
+    else:
+        make_model_key = f"{make}-na"
+    
     return pd.DataFrame([{
         'sold_date': current_date,
         'year': float(inputs['year']),
         'hours': float(inputs['hours']),
         'raw_condition': inputs.get('condition', 'Good'),
-        'make_key': inputs['make'],
-        'raw_model': inputs.get('model', 'Unknown'),
+        'make_key': make,  # Keep for backward compatibility
+        'make_model_key': make_model_key,  # NEW: Combined identifier
+        'raw_model': model if model and model != '(Any Model)' else 'Unknown',
         'region': inputs['region'],
         'raw_category': inputs['category_raw'],
         'barometer': float(inputs.get('barometer', 100)),
@@ -171,10 +172,11 @@ def main():
     st.markdown('<div class="main-header">🚜 Ag IQ Equipment Valuation</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Category-Specific AI Models for Precision Valuations</div>', unsafe_allow_html=True)
     
-    # Load reference data and check available models
+    # Load reference data and smart router
     with st.spinner("Loading valuation system..."):
+        router = get_router()
         ref_data = load_reference_data()
-        available_models = check_available_models()
+        available_models = router.list_available_models()
     
     # Show available models
     with st.expander("📚 Available Models"):
@@ -218,17 +220,27 @@ def main():
     
     category_display_name = category_options[selected_category_key]
     
-    # Check if model exists for this category
-    model = load_model(selected_category_key, model_method)
+    # Get best available model using smart router
+    model, model_type_used = router.get_best_model(selected_make, category_display_name, model_method)
     
     if model is None:
         method_name = "Log-Price" if model_method == 'log' else "Regular"
-        st.sidebar.error(f"⚠️ {category_display_name} {method_name} model not trained yet.")
-        st.info(f"**{category_display_name} ({method_name})** model not available. Train it using: `python train_{'log_' if model_method == 'log' else ''}all_models.py`")
+        st.sidebar.error(f"⚠️ No {method_name} model found for {selected_make} - {category_display_name}")
+        st.info(f"Train models using: `python train_make_category_models.py` or `python train_log_models.py`")
         return
     
+    # Show which model is being used
     method_display = "Log-Price 📊" if model_method == 'log' else "Regular"
-    st.sidebar.success(f"✓ {category_display_name} ({method_display}) loaded")
+    
+    if model_type_used == 'make_category':
+        st.sidebar.success(f"✓ {selected_make.title()} {category_display_name} Model ({method_display}) 🎯")
+        st.sidebar.caption("Using brand-specific model for best accuracy!")
+    elif model_type_used == 'category':
+        st.sidebar.info(f"✓ Generic {category_display_name} Model ({method_display})")
+        st.sidebar.caption(f"No {selected_make.title()}-specific model available")
+    else:
+        st.sidebar.warning(f"✓ Generic Model ({method_display})")
+        st.sidebar.caption("Using fallback model")
     
     # Step 2: Select Make
     st.sidebar.subheader("2️⃣ Select Make")
@@ -389,7 +401,18 @@ def main():
                 
                 # Display prediction
                 method_name = "Log-Price" if model_method == 'log' else "Regular Price"
-                st.success(f"✅ Valuation Complete - {category_display_name} ({method_name} Model)")
+                
+                if model_type_used == 'make_category':
+                    model_desc = f"{selected_make.replace('-', ' ').title()} {category_display_name}"
+                    badge = "🎯 Brand-Specific"
+                elif model_type_used == 'category':
+                    model_desc = f"{category_display_name}"
+                    badge = "📊 Category"
+                else:
+                    model_desc = "Generic"
+                    badge = "⚙️ Fallback"
+                
+                st.success(f"✅ Valuation Complete - {model_desc} ({method_name}) {badge}")
                 
                 # Comparison section if both models available
                 if other_prediction and other_info:

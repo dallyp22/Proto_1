@@ -48,6 +48,11 @@ def clean_auction_results(df: pd.DataFrame) -> pd.DataFrame:
         df['make_key'] = df['make_key'].astype(str).str.lower().str.strip()
         df.loc[df['make_key'].isin(['nan', 'none', '']), 'make_key'] = np.nan
     
+    # Standardize make_model_key (combined make-model identifier)
+    if 'make_model_key' in df.columns:
+        df['make_model_key'] = df['make_model_key'].astype(str).str.lower().str.strip()
+        df.loc[df['make_model_key'].isin(['nan', 'none', 'na-na', '']), 'make_model_key'] = np.nan
+    
     print(f"Cleaning complete: {len(df):,} records")
     return df
 

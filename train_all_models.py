@@ -50,17 +50,21 @@ def create_category_dataset(auctions, makes, barometer, diesel, el_nino, futures
     df = filter_by_category(df, category_filters, min_price, max_price)
     print(f"After category filter: {len(df):,}")
     
-    # Require critical fields (year, hours, region)
+    # Require critical fields (year, hours, region, make_model_key)
     initial = len(df)
+    
+    # Use make_model_key if available, otherwise fall back to make_key
+    make_field = 'make_model_key' if 'make_model_key' in df.columns else 'make_key'
+    
     df = df[
         df['price'].notna() & 
         df['sold_date'].notna() & 
-        df['make_key'].notna() &
+        df[make_field].notna() &
         df['year'].notna() &
         df['hours'].notna() &
         df['region'].notna()
     ]
-    print(f"After requiring complete data: {len(df):,} (removed {initial - len(df):,})")
+    print(f"After requiring complete data (including {make_field}): {len(df):,} (removed {initial - len(df):,})")
     
     # Merge makes
     df = merge_with_makes(df, makes)

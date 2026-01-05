@@ -1,7 +1,7 @@
 {
   "model_type": "log_price",
   "feature_columns": [
-    "make_key",
+    "make_model_key",
     "region",
     "utilization_bucket",
     "raw_category",
@@ -27,26 +27,26 @@
     "log_model_volume"
   ],
   "categorical_features": [
-    "make_key",
+    "make_model_key",
     "region",
     "utilization_bucket",
     "raw_category",
     "condition"
   ],
   "metadata": {
-    "trained_at": "2025-12-29T13:16:37.627878",
+    "trained_at": "2026-01-05T10:51:42.596440",
     "model_type": "log_price",
     "n_train": 13619,
     "n_val": 2919,
     "n_test": 2919,
-    "best_iteration": 313,
+    "best_iteration": 152,
     "metrics": {
-      "val_rmse": 60674.73977341935,
-      "val_mape": 48.854381414740644,
-      "val_r2": 0.6428092962330532,
-      "test_rmse": 54642.94313458692,
-      "test_mape": 45.9865933808367,
-      "test_r2": 0.5926850619690961
+      "val_rmse": 58216.111208737035,
+      "val_mape": 45.72198464890801,
+      "val_r2": 0.6711705653785748,
+      "test_rmse": 53478.35978821728,
+      "test_mape": 45.22264486612187,
+      "test_r2": 0.6098619315400816
     }
   },
   "params": {
