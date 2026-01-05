@@ -91,13 +91,25 @@ def check_available_models():
 def load_reference_data():
     """Load reference data for dropdowns with category mapping."""
     try:
-        data_path = Path(__file__).parent / "data" / "processed" / "training_data.parquet"
+        # Try to load any available processed data
+        data_options = [
+            Path(__file__).parent / "data" / "processed" / "training_data.parquet",
+            Path(__file__).parent / "data" / "processed" / "training_data_high_quality.parquet",
+        ]
         
-        if not data_path.exists():
-            # Try high quality dataset
-            data_path = Path(__file__).parent / "data" / "processed" / "training_data_high_quality.parquet"
+        df = None
+        for data_path in data_options:
+            if data_path.exists():
+                df = pd.read_parquet(data_path)
+                break
         
-        df = pd.read_parquet(data_path)
+        if df is None:
+            # If no processed data, return empty reference data
+            return {
+                'john-deere': {'makes': ['john-deere'], 'models': {}, 'regions': ['midwest']},
+                'ford': {'makes': ['ford'], 'models': {}, 'regions': ['midwest']},
+                'case-ih': {'makes': ['case-ih'], 'models': {}, 'regions': ['midwest']},
+            }
         
         # Get unique values per category
         category_data = {}
@@ -180,11 +192,13 @@ def main():
     
     # Show available models
     with st.expander("📚 Available Models"):
-        st.write("**Regular Models:**", len(available_models['regular']), "categories")
-        st.write("**Log-Price Models:**", len(available_models['log']), "categories")
+        st.write("**Make-Category Models:**", len(available_models.get('make_category', [])), "models")
+        st.write("**Category Models:**", len(available_models.get('category', [])), "models")
+        st.write("**Generic Models:**", len(available_models.get('generic', [])), "models")
         
-        if not available_models['regular']:
-            st.warning("No models trained yet. Run: python train_all_models.py")
+        total = sum(len(v) for v in available_models.values())
+        if total == 0:
+            st.warning("No models trained yet. Run: python train_make_category_models.py")
     
     st.markdown("---")
     
@@ -219,28 +233,6 @@ def main():
     )
     
     category_display_name = category_options[selected_category_key]
-    
-    # Get best available model using smart router
-    model, model_type_used = router.get_best_model(selected_make, category_display_name, model_method)
-    
-    if model is None:
-        method_name = "Log-Price" if model_method == 'log' else "Regular"
-        st.sidebar.error(f"⚠️ No {method_name} model found for {selected_make} - {category_display_name}")
-        st.info(f"Train models using: `python train_make_category_models.py` or `python train_log_models.py`")
-        return
-    
-    # Show which model is being used
-    method_display = "Log-Price 📊" if model_method == 'log' else "Regular"
-    
-    if model_type_used == 'make_category':
-        st.sidebar.success(f"✓ {selected_make.title()} {category_display_name} Model ({method_display}) 🎯")
-        st.sidebar.caption("Using brand-specific model for best accuracy!")
-    elif model_type_used == 'category':
-        st.sidebar.info(f"✓ Generic {category_display_name} Model ({method_display})")
-        st.sidebar.caption(f"No {selected_make.title()}-specific model available")
-    else:
-        st.sidebar.warning(f"✓ Generic Model ({method_display})")
-        st.sidebar.caption("Using fallback model")
     
     # Step 2: Select Make
     st.sidebar.subheader("2️⃣ Select Make")
@@ -340,6 +332,28 @@ def main():
             value=3.5,
             step=0.1
         )
+    
+    # Get best available model using smart router (after make is selected)
+    model, model_type_used = router.get_best_model(selected_make, category_display_name, model_method)
+    
+    if model is None:
+        method_name = "Log-Price" if model_method == 'log' else "Regular"
+        st.sidebar.error(f"⚠️ No {method_name} model found for {selected_make} - {category_display_name}")
+        st.info(f"Train models using: `python train_make_category_models.py` or `python train_log_models.py`")
+        return
+    
+    # Show which model is being used
+    method_display = "Log-Price 📊" if model_method == 'log' else "Regular"
+    
+    if model_type_used == 'make_category':
+        st.sidebar.success(f"✓ {selected_make.replace('-', ' ').title()} {category_display_name} ({method_display}) 🎯")
+        st.sidebar.caption("Using brand-specific model for best accuracy!")
+    elif model_type_used == 'category':
+        st.sidebar.info(f"✓ Generic {category_display_name} ({method_display})")
+        st.sidebar.caption(f"No {selected_make.replace('-', ' ').title()}-specific model available")
+    else:
+        st.sidebar.warning(f"✓ Generic Model ({method_display})")
+        st.sidebar.caption("Using fallback model")
     
     # Get raw category value for the selected category
     if selected_category_key in CATEGORY_MODELS:
@@ -609,21 +623,26 @@ def main():
         
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("**Regular Models Available:**")
-            for cat in available_models['regular'][:5]:
-                st.write(f"- {get_model_display_name(cat)}")
-            if len(available_models['regular']) > 5:
-                st.write(f"- ... and {len(available_models['regular']) - 5} more")
+            st.markdown("**Make-Category Models:**")
+            if available_models.get('make_category'):
+                for model in available_models['make_category'][:5]:
+                    display = model.replace('_', ' ').replace('-', ' ').title().replace(' Log', '')
+                    st.write(f"- {display}")
+                if len(available_models['make_category']) > 5:
+                    st.write(f"- ... and {len(available_models['make_category']) - 5} more")
+            else:
+                st.write("*Run train_make_category_models.py*")
         
         with col2:
-            st.markdown("**Log-Price Models Available:**")
-            if available_models['log']:
-                for cat in available_models['log'][:5]:
-                    st.write(f"- {get_model_display_name(cat)}")
-                if len(available_models['log']) > 5:
-                    st.write(f"- ... and {len(available_models['log']) - 5} more")
+            st.markdown("**Category Models (Fallback):**")
+            if available_models.get('category'):
+                for model in available_models['category'][:5]:
+                    display = model.replace('_', ' ').replace('-', ' ').title().replace(' Log', '')
+                    st.write(f"- {display}")
+                if len(available_models['category']) > 5:
+                    st.write(f"- ... and {len(available_models['category']) - 5} more")
             else:
-                st.write("*Run train_log_models.py to create*")
+                st.write("*Run train_log_models.py*")
     
     # Footer
     st.markdown("---")

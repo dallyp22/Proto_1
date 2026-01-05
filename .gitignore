@@ -40,6 +40,10 @@ models/*/pipeline.joblib
 # Keep model metadata for reference
 !models/*/metadata.json
 
+# EXCEPTION: Include flagship John Deere Harvesting model (26.2% MAPE)
+!models/fmv_john-deere_harvesting_log/model.lgb
+!models/fmv_john-deere_harvesting_log/pipeline.joblib
+
 # IDE
 .vscode/
 .idea/
